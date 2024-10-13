@@ -1,6 +1,8 @@
 body {
   font-family: Arial, sans-serif;
   background-color: #f5f5f5;
+  margin: 0;
+  padding: 0;
 }
 
 .container {
@@ -14,13 +16,15 @@ body {
 h1,
 h2 {
   text-align: center;
+  color: #333;
 }
 
 input {
   width: calc(100% - 22px);
   padding: 10px;
   margin: 10px 0;
-  display: block;
+  border: 1px solid #ccc;
+  border-radius: 4px;
 }
 
 button {
@@ -30,15 +34,46 @@ button {
   background-color: #007bff;
   color: #fff;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
+  font-size: 16px;
 }
 
 button:hover {
   background-color: #0056b3;
 }
 
-#carDetails,
-#auctionDetails {
+table {
+  width: 75%;
+  border-collapse: collapse;
+  margin: 20px 0;
+  background-color: #f9f9f9;
+}
+
+table,
+th,
+td {
+  border: 1px solid #ddd;
+}
+
+th {
+  background-color: #007bff;
+  color: white;
+  padding: 12px;
+}
+
+td {
+  padding: 10px;
+}
+
+th,
+td {
+  text-align: left;
+}
+
+.container #carDetails,
+.container #auctionDetails {
   margin-top: 20px;
   font-weight: bold;
+  color: #333;
 }

@@ -37,7 +37,6 @@ contract CarAuctionNetwork is ReentrancyGuard {
 
     // Register a car to the auction system
     function registerCar(string memory make, string memory model, uint256 year) public returns (uint256) {
-
         _carIdCounter.increment();
         uint256 carId = _carIdCounter.current();
 
@@ -126,6 +125,11 @@ contract CarAuctionNetwork is ReentrancyGuard {
         require(auction.started, "Auction has not started");
 
         return (auction.seller, auction.minBid, auction.highestBid, auction.highestBidder, auction.ended);
+    }
+
+    // Get the total count of registered cars
+    function getCarCount() public view returns (uint256) {
+        return _carIdCounter.current(); // Return the current count of registered cars
     }
 
     // Fallback function to handle receiving Ether

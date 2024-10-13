@@ -1,4 +1,4 @@
-const contractAddress = "0x0b3e53a79cba716a81d9af970cba6c961042744b";
+const contractAddress = "0x08e5be3090813f9a7ae3362432af588d813ca1fa";
 const contractABI = [
   {
     anonymous: false,
@@ -358,18 +358,15 @@ if (typeof window.ethereum !== "undefined") {
     console.error("User denied account access", error);
   }
 } else if (typeof window.web3 !== "undefined") {
-  // Legacy dapp browsers, using deprecated window.web3.currentProvider
   web3 = new Web3(window.web3.currentProvider);
   console.warn(
     "Using deprecated window.web3. Please upgrade to window.ethereum."
   );
 } else {
-  // Fallback to localhost; you could also use other providers like Infura
   web3 = new Web3(new Web3.providers.HttpProvider("http://localhost:8545"));
   console.warn("No Ethereum provider detected. Falling back to localhost.");
 }
 
-// Contract instance (replace 'contractAddress' and 'contractABI' with your values)
 const contract = new web3.eth.Contract(contractABI, contractAddress);
 
 // Register a new car
@@ -377,28 +374,33 @@ document.getElementById("registerCar").addEventListener("click", async () => {
   const make = document.getElementById("make").value;
   const model = document.getElementById("model").value;
   const year = document.getElementById("year").value;
-  const accounts = await web3.eth.getAccounts();
 
-  const estimatedGas = await contract.methods
-    .registerCar(make, model, year)
-    .estimateGas({ from: accounts[0] });
+  if (make && model && year) {
+    const accounts = await web3.eth.getAccounts();
 
-  const gasPrice = await web3.eth.getGasPrice();
-  const reducedGasPrice = Math.floor(gasPrice * 0.9); // Ensure integer
+    const estimatedGas = await contract.methods
+      .registerCar(make, model, year)
+      .estimateGas({ from: accounts[0] });
 
-  contract.methods
-    .registerCar(make, model, year)
-    .send({
-      from: accounts[0],
-      gas: estimatedGas,
-      gasPrice: reducedGasPrice,
-    })
-    .then((receipt) => {
-      alert("Car registered successfully!");
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+    const gasPrice = await web3.eth.getGasPrice();
+    const reducedGasPrice = Math.floor(gasPrice * 0.9); // Ensure integer
+
+    contract.methods
+      .registerCar(make, model, year)
+      .send({
+        from: accounts[0],
+        gas: estimatedGas,
+        gasPrice: reducedGasPrice,
+      })
+      .then((receipt) => {
+        alert("Car registered successfully!");
+      })
+      .catch((error) => {
+        console.error(error);
+      });
+  } else {
+    alert("Be sure to fill all the fields");
+  }
 });
 
 // Start Auction
@@ -407,7 +409,7 @@ document.getElementById("startAuction").addEventListener("click", async () => {
   const minBid = web3.utils.toWei(
     document.getElementById("minBid").value,
     "ether"
-  ); // Convert ether to wei
+  );
   const accounts = await web3.eth.getAccounts();
 
   const estimatedGas = await contract.methods
@@ -415,7 +417,7 @@ document.getElementById("startAuction").addEventListener("click", async () => {
     .estimateGas({ from: accounts[0] });
 
   const gasPrice = await web3.eth.getGasPrice();
-  const reducedGasPrice = Math.floor(gasPrice * 0.9); // Ensure integer
+  const reducedGasPrice = Math.floor(gasPrice * 0.9);
 
   contract.methods
     .startCarAuction(carId, minBid)
@@ -429,6 +431,7 @@ document.getElementById("startAuction").addEventListener("click", async () => {
     })
     .catch((error) => {
       console.error(error);
+      alert(error);
     });
 });
 
@@ -438,7 +441,7 @@ document.getElementById("placeBid").addEventListener("click", async () => {
   const bidAmount = web3.utils.toWei(
     document.getElementById("bidAmount").value,
     "ether"
-  ); // Convert ether to wei
+  );
   const accounts = await web3.eth.getAccounts();
 
   const estimatedGas = await contract.methods
@@ -446,21 +449,23 @@ document.getElementById("placeBid").addEventListener("click", async () => {
     .estimateGas({ from: accounts[0], value: bidAmount });
 
   const gasPrice = await web3.eth.getGasPrice();
-  const reducedGasPrice = Math.floor(gasPrice * 0.9); // Ensure integer
+  const reducedGasPrice = Math.floor(gasPrice * 0.9);
 
   contract.methods
     .placeBid(carId)
     .send({
       from: accounts[0],
-      value: bidAmount, // Value sent with the transaction
+      value: bidAmount,
       gas: estimatedGas,
       gasPrice: reducedGasPrice,
     })
     .then((receipt) => {
       alert("Bid placed successfully!");
+      console.log("then");
     })
     .catch((error) => {
       console.error(error);
+      console.log("catch");
     });
 });
 
@@ -474,7 +479,7 @@ document.getElementById("endAuction").addEventListener("click", async () => {
     .estimateGas({ from: accounts[0] });
 
   const gasPrice = await web3.eth.getGasPrice();
-  const reducedGasPrice = Math.floor(gasPrice * 0.9); // Ensure integer
+  const reducedGasPrice = Math.floor(gasPrice * 0.9);
 
   contract.methods
     .endAuction(carId)
@@ -491,42 +496,153 @@ document.getElementById("endAuction").addEventListener("click", async () => {
     });
 });
 
-// Get Car Details
+// Get Car and Auction Details of a single car
 document.getElementById("getDetails").addEventListener("click", async () => {
   const carId = document.getElementById("detailsCarId").value;
 
-  contract.methods
-    .getCarDetails(carId)
-    .call()
-    .then((details) => {
-      alert(
-        `Car Details - Make: ${details[0]}, Model: ${details[1]}, Year: ${details[2]}, Owner: ${details[3]}`
-      );
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+  if (carId.trim()) {
+    // Hide the all-car table
+    document.getElementById("allCarAuctionDetailsTable").style.display = "none";
+
+    // Fetch Car Details
+    let carDetails = await contract.methods
+      .getCarDetails(carId)
+      .call()
+      .catch((error) => {
+        console.error(error.message);
+        alert(`Car ID: ${carId} is not registered`);
+      });
+
+    // Fetch Auction Details
+    let auctionDetails = await contract.methods
+      .getAuctionDetails(carId)
+      .call()
+      .catch((error) => {
+        console.error(error.message);
+        alert(`Auction not yet started for car ID: ${carId}`);
+        carDetails = "";
+      });
+
+    // If Car details exist, populate the table
+    if (carDetails) {
+      const table = document.getElementById("carAuctionDetailsTable");
+      const tbody = table.querySelector("tbody");
+
+      // Clear existing rows
+      tbody.innerHTML = "";
+
+      // If auction details are not available, fill with "N/A"
+      auctionDetails = auctionDetails || ["N/A", "N/A", "N/A", "N/A", false];
+
+      // Add a new row with car and auction details
+      const row = `
+              <tr>
+                  <td>${carId}</td>
+                  <td>${carDetails[0]}</td>
+                  <td>${carDetails[1]}</td>
+                  <td>${carDetails[2]}</td>
+                  <td>${carDetails[3].slice(0, 5)}....${carDetails[3].slice(
+        carDetails[3].length - 4
+      )}</td>
+                  <td>${auctionDetails[0].slice(
+                    0,
+                    5
+                  )}....${auctionDetails[0].slice(
+        auctionDetails[0].length - 4
+      )}</td>
+                  <td>${
+                    auctionDetails[1] !== "N/A"
+                      ? web3.utils.fromWei(auctionDetails[1], "ether")
+                      : "N/A"
+                  }</td>
+                  <td>${
+                    auctionDetails[2] !== "N/A"
+                      ? web3.utils.fromWei(auctionDetails[2], "ether")
+                      : "N/A"
+                  }</td>
+                  <td>${auctionDetails[3].slice(
+                    0,
+                    5
+                  )}....${auctionDetails[3].slice(
+        auctionDetails[3].length - 4
+      )}</td>
+                  <td>${auctionDetails[4] ? "Yes" : "No"}</td>
+              </tr>
+          `;
+
+      tbody.insertAdjacentHTML("beforeend", row);
+      table.style.display = "table"; // Show the table
+    }
+  } else {
+    alert("Enter a valid car ID");
+  }
 });
 
-// Get Auction Details
-document.getElementById("getAucDetails").addEventListener("click", async () => {
-  const carId = document.getElementById("aucCarId").value;
+// Get all cars and auction details
+document.getElementById("getAllDetails").addEventListener("click", async () => {
+  // Hide the single-car table when fetching all cars
+  document.getElementById("carAuctionDetailsTable").style.display = "none";
 
-  contract.methods
-    .getAuctionDetails(carId)
-    .call()
-    .then((details) => {
-      alert(
-        `Auction Details - Seller: ${details[0]}, Min Bid: ${web3.utils.fromWei(
-          details[1],
-          "ether"
-        )} ETH, Highest Bid: ${web3.utils.fromWei(
-          details[2],
-          "ether"
-        )} ETH, Highest Bidder: ${details[3]}, Ended: ${details[4]}`
-      );
-    })
-    .catch((error) => {
-      console.error(error);
-    });
+  // Fetch total number of cars (assuming the contract has this method)
+  const carCount = await contract.methods.getCarCount().call(); // Assuming getCarCount() exists
+  const table = document.getElementById("allCarAuctionDetailsTable");
+  const tbody = table.querySelector("tbody");
+
+  // Clear existing rows
+  tbody.innerHTML = "";
+
+  for (let i = 1; i <= carCount; i++) {
+    // Start from 1 to match registered car IDs
+    try {
+      // Fetch car and auction details for each car
+      const carDetails = await contract.methods.getCarDetails(i).call();
+      const auctionDetails = await contract.methods.getAuctionDetails(i).call();
+
+      // If auction details are not available, fill with "N/A"
+      const auctionInfo = auctionDetails || ["N/A", "N/A", "N/A", "N/A", false];
+
+      // Add each car's details as a row
+      const row = `
+        <tr>
+            <td>${i}</td>
+            <td>${carDetails[0]}</td>
+            <td>${carDetails[1]}</td>
+            <td>${carDetails[2]}</td>
+            <td>${carDetails[3].slice(0, 5)}....${carDetails[3].slice(
+        carDetails[3].length - 4
+      )}</td>
+            <td>${auctionInfo[0].slice(0, 5)}....${auctionInfo[0].slice(
+        auctionInfo[0].length - 4
+      )}</td>
+            <td>${
+              auctionInfo[1] !== "N/A"
+                ? web3.utils.fromWei(auctionInfo[1], "ether")
+                : "N/A"
+            }</td>
+            <td>${
+              auctionInfo[2] !== "N/A"
+                ? web3.utils.fromWei(auctionInfo[2], "ether")
+                : "N/A"
+            }</td>
+            <td>${auctionInfo[3].slice(0, 5)}....${auctionInfo[3].slice(
+        auctionInfo[3].length - 4
+      )}</td>
+            <td>${auctionInfo[4] ? "Yes" : "No"}</td>
+        </tr>
+      `;
+
+      tbody.insertAdjacentHTML("beforeend", row);
+    } catch (error) {
+      console.error(`Error fetching details for car ID ${i}:`, error);
+      const row = `
+        <tr>
+            <td>${i}</td>
+            <td colspan="9">Error fetching details for this car.</td>
+        </tr>
+      `;
+      tbody.insertAdjacentHTML("beforeend", row);
+    }
+  }
+
+  table.style.display = "table"; // Show the table with all car details
 });

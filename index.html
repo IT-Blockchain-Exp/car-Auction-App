@@ -42,18 +42,57 @@
         </section>
 
         <section>
-            <h2>Car Details</h2>
-            <input type="number" id="detailsCarId" placeholder="Car ID" />
+            <h2>Car and Auction Details</h2>
+            <input type="text" id="detailsCarId" placeholder="Enter Car ID" />
             <button id="getDetails">Get Details</button>
-
+            <br>
+            <br>
+            <hr style="height: 2px ; background-color: black ;">
+            <br>
+            <button id="getAllDetails">Get All Cars and Auction Details in the Network</button>
         </section>
+    </div>
 
-        <section>
-            <h2>Auction Details</h2>
-            <input type="number" id="aucCarId" placeholder="Car ID" />
-            <button id="getAucDetails">Get Details</button>
+    <div style="display: flex; justify-content: center;">
+        <!-- Table for a single car's details -->
+        <table id="carAuctionDetailsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Car ID</th>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Year</th>
+                    <th>Owner</th>
+                    <th>Seller</th>
+                    <th>Min Bid (ETH)</th>
+                    <th>Highest Bid (ETH)</th>
+                    <th>Highest Bidder</th>
+                    <th>Auction Ended</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 
-        </section>
+    <div style="display: flex; justify-content: center;">
+        <!-- Table for all cars' details -->
+        <table id="allCarAuctionDetailsTable" style="display: none;">
+            <thead>
+                <tr>
+                    <th>Car ID</th>
+                    <th>Make</th>
+                    <th>Model</th>
+                    <th>Year</th>
+                    <th>Owner</th>
+                    <th>Seller</th>
+                    <th>Min Bid (ETH)</th>
+                    <th>Highest Bid (ETH)</th>
+                    <th>Highest Bidder</th>
+                    <th>Auction Ended</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
     </div>
 
     <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
