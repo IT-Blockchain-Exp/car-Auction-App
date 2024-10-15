@@ -1,4 +1,4 @@
-const contractAddress = "0x08e5be3090813f9a7ae3362432af588d813ca1fa";
+const contractAddress = "0x92d67969c773e1746dc575a1dcbe3884ced9041e";
 const contractABI = [
   {
     anonymous: false,
@@ -82,6 +82,19 @@ const contractABI = [
     type: "event",
   },
   {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "carId",
+        type: "uint256",
+      },
+    ],
+    name: "endAuction",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
     anonymous: false,
     inputs: [
       {
@@ -105,6 +118,70 @@ const contractABI = [
     ],
     name: "NewBid",
     type: "event",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "carId",
+        type: "uint256",
+      },
+    ],
+    name: "placeBid",
+    outputs: [],
+    stateMutability: "payable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "string",
+        name: "make",
+        type: "string",
+      },
+      {
+        internalType: "string",
+        name: "model",
+        type: "string",
+      },
+      {
+        internalType: "uint256",
+        name: "year",
+        type: "uint256",
+      },
+    ],
+    name: "registerCar",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
+      },
+    ],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    inputs: [
+      {
+        internalType: "uint256",
+        name: "carId",
+        type: "uint256",
+      },
+      {
+        internalType: "uint256",
+        name: "minBid",
+        type: "uint256",
+      },
+    ],
+    name: "startCarAuction",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+  {
+    stateMutability: "payable",
+    type: "receive",
   },
   {
     inputs: [
@@ -202,19 +279,6 @@ const contractABI = [
         type: "uint256",
       },
     ],
-    name: "endAuction",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "carId",
-        type: "uint256",
-      },
-    ],
     name: "getAuctionDetails",
     outputs: [
       {
@@ -241,6 +305,19 @@ const contractABI = [
         internalType: "bool",
         name: "ended",
         type: "bool",
+      },
+    ],
+    stateMutability: "view",
+    type: "function",
+  },
+  {
+    inputs: [],
+    name: "getCarCount",
+    outputs: [
+      {
+        internalType: "uint256",
+        name: "",
+        type: "uint256",
       },
     ],
     stateMutability: "view",
@@ -279,70 +356,6 @@ const contractABI = [
     ],
     stateMutability: "view",
     type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "carId",
-        type: "uint256",
-      },
-    ],
-    name: "placeBid",
-    outputs: [],
-    stateMutability: "payable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "string",
-        name: "make",
-        type: "string",
-      },
-      {
-        internalType: "string",
-        name: "model",
-        type: "string",
-      },
-      {
-        internalType: "uint256",
-        name: "year",
-        type: "uint256",
-      },
-    ],
-    name: "registerCar",
-    outputs: [
-      {
-        internalType: "uint256",
-        name: "",
-        type: "uint256",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    inputs: [
-      {
-        internalType: "uint256",
-        name: "carId",
-        type: "uint256",
-      },
-      {
-        internalType: "uint256",
-        name: "minBid",
-        type: "uint256",
-      },
-    ],
-    name: "startCarAuction",
-    outputs: [],
-    stateMutability: "nonpayable",
-    type: "function",
-  },
-  {
-    stateMutability: "payable",
-    type: "receive",
   },
 ];
 
@@ -583,8 +596,8 @@ document.getElementById("getAllDetails").addEventListener("click", async () => {
   // Hide the single-car table when fetching all cars
   document.getElementById("carAuctionDetailsTable").style.display = "none";
 
-  // Fetch total number of cars (assuming the contract has this method)
-  const carCount = await contract.methods.getCarCount().call(); // Assuming getCarCount() exists
+  // Fetch total number of cars
+  const carCount = await contract.methods.getCarCount().call();
   const table = document.getElementById("allCarAuctionDetailsTable");
   const tbody = table.querySelector("tbody");
 
@@ -592,14 +605,53 @@ document.getElementById("getAllDetails").addEventListener("click", async () => {
   tbody.innerHTML = "";
 
   for (let i = 1; i <= carCount; i++) {
-    // Start from 1 to match registered car IDs
     try {
-      // Fetch car and auction details for each car
+      // Fetch car details for each car
       const carDetails = await contract.methods.getCarDetails(i).call();
-      const auctionDetails = await contract.methods.getAuctionDetails(i).call();
 
-      // If auction details are not available, fill with "N/A"
-      const auctionInfo = auctionDetails || ["N/A", "N/A", "N/A", "N/A", false];
+      // Default auction info
+      let auctionDetails;
+      let auctionStatus = "Auction Not Started";
+      let auctionInfo = {
+        seller: "N/A",
+        minBid: "N/A",
+        highestBid: "N/A",
+        highestBidder: "N/A",
+        auctionEnded: false,
+      };
+
+      try {
+        // Try fetching auction details (in case it exists)
+        auctionDetails = await contract.methods.getAuctionDetails(i).call();
+
+        // Check if the auction was started
+        if (
+          auctionDetails.seller !== "0x0000000000000000000000000000000000000000"
+        ) {
+          auctionInfo.seller = auctionDetails.seller;
+          auctionInfo.minBid = web3.utils.fromWei(
+            auctionDetails.minBid,
+            "ether"
+          );
+          auctionInfo.highestBid =
+            auctionDetails.highestBid > 0
+              ? web3.utils.fromWei(auctionDetails.highestBid, "ether")
+              : "No Bids yet";
+          auctionInfo.highestBidder =
+            auctionDetails.highestBidder !==
+            "0x0000000000000000000000000000000000000000"
+              ? auctionDetails.highestBidder
+              : "0x0000000000000000000000000000000000000000";
+          auctionInfo.auctionEnded = auctionDetails.ended;
+
+          // Set auction status based on whether the auction has ended or not
+          auctionStatus = auctionDetails.ended
+            ? "Auction Completed"
+            : "Auction Ongoing";
+        }
+      } catch (auctionError) {
+        console.log(`No auction started for car ID ${i}`);
+      }
 
       // Add each car's details as a row
       const row = `
@@ -611,23 +663,32 @@ document.getElementById("getAllDetails").addEventListener("click", async () => {
             <td>${carDetails[3].slice(0, 5)}....${carDetails[3].slice(
         carDetails[3].length - 4
       )}</td>
-            <td>${auctionInfo[0].slice(0, 5)}....${auctionInfo[0].slice(
-        auctionInfo[0].length - 4
-      )}</td>
             <td>${
-              auctionInfo[1] !== "N/A"
-                ? web3.utils.fromWei(auctionInfo[1], "ether")
+              auctionInfo.seller !== "N/A"
+                ? auctionInfo.seller.slice(0, 5) +
+                  "...." +
+                  auctionInfo.seller.slice(auctionInfo.seller.length - 4)
                 : "N/A"
             }</td>
             <td>${
-              auctionInfo[2] !== "N/A"
-                ? web3.utils.fromWei(auctionInfo[2], "ether")
+              auctionInfo.minBid !== "N/A" ? auctionInfo.minBid + " ETH" : "N/A"
+            }</td>
+            <td>${
+              auctionInfo.highestBid !== "N/A" &&
+              auctionInfo.highestBid !== "No Bids yet"
+                ? auctionInfo.highestBid + " ETH"
+                : auctionInfo.highestBid
+            }</td>
+            <td>${
+              auctionInfo.highestBidder !== "N/A"
+                ? auctionInfo.highestBidder.slice(0, 5) +
+                  "...." +
+                  auctionInfo.highestBidder.slice(
+                    auctionInfo.highestBidder.length - 4
+                  )
                 : "N/A"
             }</td>
-            <td>${auctionInfo[3].slice(0, 5)}....${auctionInfo[3].slice(
-        auctionInfo[3].length - 4
-      )}</td>
-            <td>${auctionInfo[4] ? "Yes" : "No"}</td>
+            <td>${auctionStatus}</td>
         </tr>
       `;
 
