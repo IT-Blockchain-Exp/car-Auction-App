@@ -474,11 +474,9 @@ document.getElementById("placeBid").addEventListener("click", async () => {
     })
     .then((receipt) => {
       alert("Bid placed successfully!");
-      console.log("then");
     })
     .catch((error) => {
       console.error(error);
-      console.log("catch");
     });
 });
 
